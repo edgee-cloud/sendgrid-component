@@ -35,7 +35,7 @@ pub fn build_sendgrid_payload(
     subject: String,
     message: Option<String>,
     template_id: Option<String>,
-    template_data: Option<serde_json::Value>,
+    dynamic_template_data: Option<serde_json::Value>,
 ) -> SendGridPayload {
     if template_id.is_some() {
         // use template if provided
@@ -43,11 +43,11 @@ pub fn build_sendgrid_payload(
             personalizations: vec![SendGridPayloadPersonalizations {
                 to: vec![SendGridPayloadEmail { email: email_to }],
                 subject: None, // subject is not used if template_id is provided
-                dynamic_template_data: template_data,
+                dynamic_template_data,
             }],
             from: SendGridPayloadEmail { email: email_from },
             content: vec![], // no content if template_id is provided
-            template_id: template_id,
+            template_id,
         }
     } else {
         // simple text message without template
