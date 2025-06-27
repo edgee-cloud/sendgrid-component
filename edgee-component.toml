@@ -1,0 +1,33 @@
+manifest-version = 1
+
+[component]
+name = "Sendgrid"
+version = "1.0.0"
+
+category = "edge-function"
+subcategory = "wasm-function"
+description = "Edge function component to send emails via SendGrid."
+documentation = "https://github.com/edgee-cloud/sendgrid-component"
+repository = "https://github.com/edgee-cloud/sendgrid-component"
+language = "Rust"
+wit-version = "1.0.0"
+icon-path = "sendgrid.png"
+
+[component.build]
+command = "cargo build --release --target wasm32-wasip2 --target-dir ./target && mv ./target/wasm32-wasip2/release/sendgrid_component.wasm ./sendgrid.wasm"
+output_path = "sendgrid.wasm"
+
+[component.settings.api_key]
+title = "SendGrid API Key"
+type = "string"
+required = true
+secret = true
+
+[component.settings.from_email]
+title = "Email (from)"
+type = "string"
+required = true
+
+[component.settings.subject]
+title = "Subject (optional)"
+type = "string"
