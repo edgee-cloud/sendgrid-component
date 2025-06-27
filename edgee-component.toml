@@ -23,11 +23,15 @@ type = "string"
 required = true
 secret = true
 
-[component.settings.from_email]
+[component.settings.email_from]
 title = "Email (from)"
 type = "string"
 required = true
 
 [component.settings.subject]
 title = "Subject (optional)"
+type = "string"
+
+[component.settings.template_id]
+title = "Template ID (optional)"
 type = "string"

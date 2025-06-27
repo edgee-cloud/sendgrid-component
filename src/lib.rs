@@ -1,8 +1,10 @@
 mod helpers;
+mod sendgrid_payload;
 mod world;
 
 use std::collections::HashMap;
 
+use sendgrid_payload::build_sendgrid_payload;
 use world::bindings::exports::wasi::http::incoming_handler::Guest;
 use world::bindings::wasi::http::types::IncomingRequest;
 use world::bindings::wasi::http::types::ResponseOutparam;
@@ -48,15 +50,40 @@ impl Guest for Component {
         };
 
         // extract message from request body
-        let message = match body_json.get("message") {
-            Some(value) => value.as_str().unwrap_or("").to_string(), // this removes quotes and converts to String
+        let message: Option<String> = match body_json.get("message") {
+            Some(value) => Some(value.as_str().unwrap_or("").to_string()), // this removes quotes and converts to String
             None => {
-                let response = helpers::build_response_json_error(
-                    "Missing 'message' field in request body",
-                    400,
-                );
-                response.send(resp);
-                return;
+                if settings.template_id.is_some() {
+                    // if template_id is provided, message is not required
+                    None
+                } else {
+                    // if no template_id, message is required
+                    let response = helpers::build_response_json_error(
+                        "Missing 'message' field in request body",
+                        400,
+                    );
+                    response.send(resp);
+                    return;
+                }
+            }
+        };
+
+        // extract dynamic template data from request body
+        let template_data: Option<serde_json::Value> = match body_json.get("data") {
+            Some(value) => Some(value.clone()),
+            None => {
+                if settings.template_id.is_none() {
+                    // if template_id is not provided, data is not required
+                    None
+                } else {
+                    // if template_id, data is required
+                    let response = helpers::build_response_json_error(
+                        "Missing 'data' field in request body",
+                        400,
+                    );
+                    response.send(resp);
+                    return;
+                }
             }
         };
 
@@ -74,21 +101,14 @@ impl Guest for Component {
         };
 
         // build Slack API payload for simple text message
-        let sendgrid_payload = SendGridPayload {
-            personalizations: vec![SendGridPayloadPersonalizations {
-                to: vec![SendGridPayloadEmail {
-                    email: email_to.clone(),
-                }],
-                subject: settings.subject.clone(),
-            }],
-            from: SendGridPayloadEmail {
-                email: settings.from_email.clone(),
-            },
-            content: vec![SendGridPayloadContent {
-                _type: "text/plain".to_string(),
-                value: message,
-            }],
-        };
+        let sendgrid_payload = build_sendgrid_payload(
+            settings.email_from,
+            email_to,
+            settings.subject,
+            message,
+            settings.template_id,
+            template_data,
+        );
 
         // send message to Slack
         let sendgrid_response = waki::Client::new()
@@ -109,35 +129,11 @@ impl Guest for Component {
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
-struct SendGridPayloadEmail {
-    email: String
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-struct SendGridPayload {
-    personalizations: Vec<SendGridPayloadPersonalizations>,
-    from: SendGridPayloadEmail,
-    content: Vec<SendGridPayloadContent>,
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-struct SendGridPayloadPersonalizations {
-    to: Vec<SendGridPayloadEmail>,
-    subject: String,
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-struct SendGridPayloadContent {
-    #[serde(rename = "type")]
-    _type: String,
-    value: String,
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
 pub struct Settings {
     pub api_key: String,
-    pub from_email: String,
-    pub subject: String,
+    pub email_from: String,
+    pub subject: String,             // optional, defaults to "Contact request"
+    pub template_id: Option<String>, // optional
 }
 
 impl Settings {
@@ -164,9 +160,9 @@ impl Settings {
             .get("api_key")
             .map(String::to_string)
             .unwrap_or_default();
-    
-        let from_email = setting
-            .get("from_email")
+
+        let email_from = setting
+            .get("email_from")
             .map(String::to_string)
             .unwrap_or_default();
 
@@ -175,8 +171,14 @@ impl Settings {
             .map(String::to_string)
             .unwrap_or(DEFAULT_SUBJECT.to_string());
 
+        let template_id: Option<String> = setting.get("template_id").cloned();
 
-        Ok(Self { api_key, from_email, subject })
+        Ok(Self {
+            api_key,
+            email_from,
+            subject,
+            template_id,
+        })
     }
 }
 
