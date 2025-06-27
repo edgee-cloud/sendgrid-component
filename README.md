@@ -32,6 +32,9 @@ then you invoke it from your frontend code.
 id = "sendgrid"
 file = "/var/edgee/components/sendgrid.wasm"
 settings.edgee_path = "/contact"
+settings.api_key = "SG.abc.xyz"
+settings.from_email = "from@example.com" # your verified sender identity
+settings.subject = "Contact request" # optional
 ```
 
 ## Development
