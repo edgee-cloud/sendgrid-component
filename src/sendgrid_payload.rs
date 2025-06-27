@@ -1,3 +1,4 @@
+
 #[derive(serde::Deserialize, serde::Serialize)]
 struct SendGridPayloadEmail {
     email: String,
@@ -64,5 +65,69 @@ pub fn build_sendgrid_payload(
             }],
             template_id: None, // use content if no template_id is provided
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+
+    #[test]
+    fn test_build_sendgrid_payload_with_template() {
+        let email_from = "from@example.com".to_string();
+        let email_to = "to@example.com".to_string();
+        let subject = "Ignored Subject".to_string();
+        let message = None;
+        let template_id = Some("template-123".to_string());
+        let dynamic_template_data = Some(json!({"name": "John"}));
+
+        let payload = build_sendgrid_payload(
+            email_from.clone(),
+            email_to.clone(),
+            subject,
+            message,
+            template_id.clone(),
+            dynamic_template_data.clone(),
+        );
+
+        assert_eq!(payload.from.email, email_from);
+        assert_eq!(payload.personalizations.len(), 1);
+        assert_eq!(payload.personalizations[0].to[0].email, email_to);
+        assert!(payload.personalizations[0].subject.is_none());
+        assert_eq!(payload.personalizations[0].dynamic_template_data, dynamic_template_data);
+        assert_eq!(payload.content.len(), 0);
+        assert_eq!(payload.template_id, template_id);
+        assert_eq!(payload.personalizations[0].dynamic_template_data, dynamic_template_data);
+    }
+
+    #[test]
+    fn test_build_sendgrid_payload_with_static_content() {
+        let email_from = "from@example.com".to_string();
+        let email_to = "to@example.com".to_string();
+        let subject = "Hello".to_string();
+        let message = Some("This is a test message.".to_string());
+        let template_id = None;
+        let dynamic_template_data = None;
+
+        let payload = build_sendgrid_payload(
+            email_from.clone(),
+            email_to.clone(),
+            subject.clone(),
+            message.clone(),
+            template_id,
+            dynamic_template_data,
+        );
+
+        assert_eq!(payload.from.email, email_from);
+        assert_eq!(payload.personalizations.len(), 1);
+        assert_eq!(payload.personalizations[0].to[0].email, email_to);
+        assert_eq!(payload.personalizations[0].subject, Some(subject));
+        assert!(payload.personalizations[0].dynamic_template_data.is_none());
+        assert_eq!(payload.content.len(), 1);
+        assert_eq!(payload.content[0]._type, "text/plain");
+        assert_eq!(payload.content[0].value, message.unwrap());
+        assert!(payload.template_id.is_none());
     }
 }
