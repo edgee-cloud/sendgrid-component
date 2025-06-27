@@ -37,6 +37,32 @@ settings.from_email = "from@example.com" # your verified sender identity
 settings.subject = "Contact request" # optional
 ```
 
+### How to use the HTTP endpoint
+
+You can send requests to the endpoint as follows:
+
+```javascript
+
+// using static text
+await fetch('/contact', {
+  method: 'POST',
+  body: JSON.stringify({
+    "message": "hello world!", // static content (plain text)
+    "email": "test@example.com"
+    })
+});
+
+// using a dynamic template
+await fetch('/contact', {
+  method: 'POST',
+  body: JSON.stringify({
+    "data": {"name": "John"}, // dynamic data for your template
+    "email": "test@example.com"
+    })
+});
+
+```
+
 ## Development
 
 ### Building from Source
