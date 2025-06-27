@@ -1,4 +1,3 @@
-
 #[derive(serde::Deserialize, serde::Serialize)]
 struct SendGridPayloadEmail {
     email: String,
@@ -73,7 +72,6 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-
     #[test]
     fn test_build_sendgrid_payload_with_template() {
         let email_from = "from@example.com".to_string();
@@ -96,10 +94,16 @@ mod tests {
         assert_eq!(payload.personalizations.len(), 1);
         assert_eq!(payload.personalizations[0].to[0].email, email_to);
         assert!(payload.personalizations[0].subject.is_none());
-        assert_eq!(payload.personalizations[0].dynamic_template_data, dynamic_template_data);
+        assert_eq!(
+            payload.personalizations[0].dynamic_template_data,
+            dynamic_template_data
+        );
         assert_eq!(payload.content.len(), 0);
         assert_eq!(payload.template_id, template_id);
-        assert_eq!(payload.personalizations[0].dynamic_template_data, dynamic_template_data);
+        assert_eq!(
+            payload.personalizations[0].dynamic_template_data,
+            dynamic_template_data
+        );
     }
 
     #[test]
