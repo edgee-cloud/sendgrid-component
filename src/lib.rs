@@ -110,7 +110,7 @@ impl Guest for Component {
             template_data,
         );
 
-        // send message to Slack
+        // send message to SendGrid
         let sendgrid_response = waki::Client::new()
             .post(SENDGRID_ENDPOINT)
             .header("Content-Type", "application/json")
