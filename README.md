@@ -34,7 +34,8 @@ file = "/var/edgee/components/sendgrid.wasm"
 settings.edgee_path = "/contact"
 settings.api_key = "SG.abc.xyz"
 settings.from_email = "from@example.com" # your verified sender identity
-settings.subject = "Contact request" # optional
+settings.subject = "Contact request" # optional (only used when no template_id is provided)
+settings.template_id = "d-abcxyz" # optional
 ```
 
 ### How to use the HTTP endpoint
