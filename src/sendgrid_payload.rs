@@ -37,7 +37,7 @@ pub fn build_sendgrid_payload(
     template_id: Option<String>,
     dynamic_template_data: Option<serde_json::Value>,
 ) -> SendGridPayload {
-    if template_id.is_some() {
+    if template_id.is_some() && !template_id.as_ref().unwrap().is_empty() {
         // use template if provided
         SendGridPayload {
             personalizations: vec![SendGridPayloadPersonalizations {
