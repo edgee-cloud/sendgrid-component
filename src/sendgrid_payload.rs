@@ -75,7 +75,7 @@ impl SendGridPayload {
         let response = client
             .post(SENDGRID_ENDPOINT)
             .header("Content-Type", "application/json")
-            .header("Authorization", format!("Bearer {}", api_key))
+            .header("Authorization", format!("Bearer {api_key}"))
             .body(serde_json::to_vec(self)?)
             .send()?;
         Ok(response)
