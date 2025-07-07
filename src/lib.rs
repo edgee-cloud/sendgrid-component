@@ -49,41 +49,21 @@ impl Guest for Component {
             }
         };
 
-        // extract message from request body
-        let message: Option<String> = match body_json.get("message") {
-            Some(value) => Some(value.as_str().unwrap_or("").to_string()), // this removes quotes and converts to String
-            None => {
-                if settings.template_id.is_some() {
-                    // if template_id is provided, message is not required
-                    None
-                } else {
-                    // if no template_id, message is required
-                    let response = helpers::build_response_json_error(
-                        "Missing 'message' field in request body",
-                        400,
-                    );
-                    response.send(resp);
-                    return;
-                }
+        let message = match extract_message(&body_json, &settings.template_id) {
+            Ok(data) => data,
+            Err(e) => {
+                let response = helpers::build_response_json_error(&e.to_string(), 400);
+                response.send(resp);
+                return;
             }
         };
 
-        // extract dynamic template data from request body
-        let template_data: Option<serde_json::Value> = match body_json.get("data") {
-            Some(value) => Some(value.clone()),
-            None => {
-                if settings.template_id.is_none() {
-                    // if template_id is not provided, data is not required
-                    None
-                } else {
-                    // if template_id, data is required
-                    let response = helpers::build_response_json_error(
-                        "Missing 'data' field in request body",
-                        400,
-                    );
-                    response.send(resp);
-                    return;
-                }
+        let template_data = match extract_template_data(&body_json, &settings.template_id) {
+            Ok(data) => data,
+            Err(e) => {
+                let response = helpers::build_response_json_error(&e.to_string(), 400);
+                response.send(resp);
+                return;
             }
         };
 
@@ -128,7 +108,43 @@ impl Guest for Component {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+fn extract_message(
+    body_json: &serde_json::Value,
+    template_id: &Option<String>,
+) -> anyhow::Result<Option<String>> {
+    match body_json.get("message") {
+        // just return the value if it exists (removing quotes and converting to String)
+        Some(value) => Ok(Some(value.as_str().unwrap_or("").to_string())),
+        None => {
+            // if template_id is provided, message is not required
+            if template_id.is_some() && !template_id.as_ref().unwrap().is_empty() {
+                Ok(None)
+            } else {
+                Err(anyhow::anyhow!("Missing 'message' field in request body"))
+            }
+        }
+    }
+}
+
+fn extract_template_data(
+    body_json: &serde_json::Value,
+    template_id: &Option<String>,
+) -> anyhow::Result<Option<serde_json::Value>> {
+    match body_json.get("data") {
+        // just return the value if it exists
+        Some(value) => Ok(Some(value.clone())),
+        None => {
+            // if template_id is not provided, data is not required
+            if template_id.is_none() || template_id.as_ref().unwrap().is_empty() {
+                Ok(None)
+            } else {
+                Err(anyhow::anyhow!("Missing 'data' field in request body"))
+            }
+        }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct Settings {
     pub api_key: String,
     pub email_from: String,
@@ -196,5 +212,121 @@ mod tests {
 
         let settings = Settings::new(&headers).unwrap();
         assert_eq!(settings.api_key, "test_value");
+    }
+
+    #[test]
+    fn test_settings_new_missing_header() {
+        let headers = HashMap::new();
+        let result = Settings::new(&headers);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing 'x-edgee-component-settings' header"
+        );
+    }
+
+    #[test]
+    fn test_settings_new_multiple_headers() {
+        let mut headers = HashMap::new();
+        headers.insert(
+            "x-edgee-component-settings".to_string(),
+            vec![
+                r#"{"api_key": "test_value"}"#.to_string(),
+                r#"{"api_key": "another_value"}"#.to_string(),
+            ],
+        );
+        let result = Settings::new(&headers);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Expected exactly one 'x-edgee-component-settings' header"));
+    }
+
+    #[test]
+    fn test_settings_new_invalid_json() {
+        let mut headers = HashMap::new();
+        headers.insert(
+            "x-edgee-component-settings".to_string(),
+            vec!["not a json".to_string()],
+        );
+        let result = Settings::new(&headers);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extract_message_with_message() {
+        let json = serde_json::json!({"message": "Hello, world!"});
+        let template_id = None;
+        let result = extract_message(&json, &template_id).unwrap();
+        assert_eq!(result, Some("Hello, world!".to_string()));
+    }
+
+    #[test]
+    fn test_extract_message_with_message_empty_template_id() {
+        let json = serde_json::json!({"message": "Hello, world!"});
+        let template_id = Some("".to_string()); //empty string instead of None
+        let result = extract_message(&json, &template_id).unwrap();
+        assert_eq!(result, Some("Hello, world!".to_string()));
+    }
+
+    #[test]
+    fn test_extract_message_missing_message_with_template_id() {
+        let json = serde_json::json!({});
+        let template_id = Some("template123".to_string());
+        let result = extract_message(&json, &template_id).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_extract_message_missing_message_without_template_id() {
+        let json = serde_json::json!({});
+        let template_id = None;
+        let result = extract_message(&json, &template_id);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing 'message' field in request body"
+        );
+    }
+
+    #[test]
+    fn test_extract_message_missing_message_with_empty_template_id() {
+        let json = serde_json::json!({});
+        let template_id = Some("".to_string()); //empty string instead of None
+        let result = extract_message(&json, &template_id);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing 'message' field in request body"
+        );
+    }
+
+    #[test]
+    fn test_extract_template_data_with_data() {
+        let json = serde_json::json!({"data": {"foo": "bar"}});
+        let template_id = Some("template123".to_string());
+        let result = extract_template_data(&json, &template_id).unwrap();
+        assert_eq!(result, Some(serde_json::json!({"foo": "bar"})));
+    }
+
+    #[test]
+    fn test_extract_template_data_missing_data_with_template_id() {
+        let json = serde_json::json!({});
+        let template_id = Some("template123".to_string());
+        let result = extract_template_data(&json, &template_id);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing 'data' field in request body"
+        );
+    }
+
+    #[test]
+    fn test_extract_template_data_missing_data_without_template_id() {
+        let json = serde_json::json!({});
+        let template_id = None;
+        let result = extract_template_data(&json, &template_id).unwrap();
+        assert_eq!(result, None);
     }
 }
