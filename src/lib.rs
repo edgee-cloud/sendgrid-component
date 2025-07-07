@@ -4,13 +4,12 @@ mod world;
 
 use std::collections::HashMap;
 
-use sendgrid_payload::build_sendgrid_payload;
+use sendgrid_payload::SendGridPayload;
 use world::bindings::exports::wasi::http::incoming_handler::Guest;
 use world::bindings::wasi::http::types::IncomingRequest;
 use world::bindings::wasi::http::types::ResponseOutparam;
 use world::bindings::Component;
 
-const SENDGRID_ENDPOINT: &str = "https://api.sendgrid.com/v3/mail/send";
 const DEFAULT_SUBJECT: &str = "Contact request";
 
 impl Guest for Component {
@@ -81,7 +80,7 @@ impl Guest for Component {
         };
 
         // build Slack API payload for simple text message
-        let sendgrid_payload = build_sendgrid_payload(
+        let sendgrid_payload = SendGridPayload::new(
             settings.email_from,
             email_to,
             settings.subject,
@@ -90,15 +89,16 @@ impl Guest for Component {
             template_data,
         );
 
-        // send message to SendGrid
-        let sendgrid_response = waki::Client::new()
-            .post(SENDGRID_ENDPOINT)
-            .header("Content-Type", "application/json")
-            .header("Authorization", format!("Bearer {}", settings.api_key))
-            .body(serde_json::to_vec(&sendgrid_payload).unwrap())
-            .send()
-            .unwrap();
+        let sendgrid_response = sendgrid_payload.send(&settings.api_key);
 
+        // handle error in case request couldn't be sent
+        if let Err(e) = sendgrid_response {
+            let response = helpers::build_response_json_error(&e.to_string(), 500);
+            response.send(resp);
+            return;
+        }
+
+        let sendgrid_response = sendgrid_response.unwrap();
         let response_status = sendgrid_response.status_code();
         let response_body =
             String::from_utf8_lossy(&sendgrid_response.body().unwrap_or_default()).to_string();
