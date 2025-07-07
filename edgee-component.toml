@@ -22,16 +22,20 @@ title = "SendGrid API Key"
 type = "string"
 required = true
 secret = true
+description = "Your API key such as SG.abc.xyz"
 
 [component.settings.email_from]
 title = "Email (from)"
 type = "string"
 required = true
+description = "Your verified sender identity such as hello@example.com"
 
 [component.settings.subject]
 title = "Subject (optional)"
 type = "string"
+description = "The email subject, only used for static messages (when no Template ID is provided)"
 
 [component.settings.template_id]
 title = "Template ID (optional)"
 type = "string"
+description = "The ID of your Dynamic Template such as d-abcxyz"
