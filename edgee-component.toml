@@ -1,0 +1,41 @@
+manifest-version = 1
+
+[component]
+name = "Sendgrid"
+version = "1.0.0"
+
+category = "edge-function"
+subcategory = "wasm-function"
+description = "Edge function component to send emails via SendGrid."
+documentation = "https://github.com/edgee-cloud/sendgrid-component"
+repository = "https://github.com/edgee-cloud/sendgrid-component"
+language = "Rust"
+wit-version = "1.0.0"
+icon-path = "sendgrid.png"
+
+[component.build]
+command = "cargo build --release --target wasm32-wasip2 --target-dir ./target && mv ./target/wasm32-wasip2/release/sendgrid_component.wasm ./sendgrid.wasm"
+output_path = "sendgrid.wasm"
+
+[component.settings.api_key]
+title = "SendGrid API Key"
+type = "string"
+required = true
+secret = true
+description = "Your API key such as SG.abc.xyz"
+
+[component.settings.email_from]
+title = "Email (from)"
+type = "string"
+required = true
+description = "Your verified sender identity such as hello@example.com"
+
+[component.settings.subject]
+title = "Subject (optional)"
+type = "string"
+description = "The email subject, only used for static messages (when no Template ID is provided)"
+
+[component.settings.template_id]
+title = "Template ID (optional)"
+type = "string"
+description = "The ID of your Dynamic Template such as d-abcxyz"
