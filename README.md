@@ -35,8 +35,8 @@ settings.api_key = "SG.abc.xyz"
 settings.from_email = "from@example.com" # your verified sender identity
 settings.subject = "Contact request" # optional (only used when no template_id is provided)
 settings.template_id = "d-abcxyz" # optional
-settings.edgee_path = "/path"
-settings.edgee_path_prefix = "/myprefix"
+settings.edgee_path = "/path" # exact match
+settings.edgee_path_prefix = "/prefix" # will match /prefix/anything
 ```
 Note that either `edgee_path` or `edgee_path_prefix` must be set, but not both.
 
