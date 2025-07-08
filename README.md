@@ -31,12 +31,14 @@ then you invoke it from your frontend code.
 [[components.edge_functions]]
 id = "sendgrid"
 file = "/var/edgee/components/sendgrid.wasm"
-settings.edgee_path = "/contact"
 settings.api_key = "SG.abc.xyz"
 settings.from_email = "from@example.com" # your verified sender identity
 settings.subject = "Contact request" # optional (only used when no template_id is provided)
 settings.template_id = "d-abcxyz" # optional
+settings.edgee_path = "/path"
+settings.edgee_path_prefix = "/myprefix"
 ```
+Note that either `edgee_path` or `edgee_path_prefix` must be set, but not both.
 
 ### How to use the HTTP endpoint
 
