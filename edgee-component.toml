@@ -14,7 +14,7 @@ wit-version = "1.0.0"
 icon-path = "sendgrid.png"
 
 [component.build]
-command = "cargo build --release --target wasm32-wasip2 --target-dir ./target && mv ./target/wasm32-wasip2/release/sendgrid_component.wasm ./sendgrid.wasm"
+command = "cargo build --release --target wasm32-wasip2 --target-dir ./target && rm -f ./sendgrid.wasm && mv ./target/wasm32-wasip2/release/sendgrid_component.wasm ./sendgrid.wasm"
 output_path = "sendgrid.wasm"
 
 [component.settings.api_key]
